@@ -211,6 +211,52 @@ public class MinifyMojo extends AbstractMojo {
     /**
      * JavaScript source directory.
      */
+    @Parameter(property = "htmlSourceDir", defaultValue = "html")
+    private String htmlSourceDir;
+
+    /**
+     * JavaScript source file names list.
+     */
+    @Parameter(property = "htmlSourceFiles", alias = "htmlFiles")
+    private ArrayList<String> htmlSourceFiles;
+
+    /**
+     * JavaScript files to include. Specified as fileset patterns which are relative to the JavaScript source directory.
+     *
+     * @since 1.2
+     */
+    @Parameter(property = "htmlSourceIncludes", alias = "htmlIncludes")
+    private ArrayList<String> htmlSourceIncludes;
+
+    /**
+     * JavaScript files to exclude. Specified as fileset patterns which are relative to the JavaScript source directory.
+     *
+     * @since 1.2
+     */
+    @Parameter(property = "htmlSourceExcludes", alias = "htmlExcludes")
+    private ArrayList<String> htmlSourceExcludes;
+
+    /**
+     * JavaScript target directory. Takes the same value as {@code htmlSourceDir} when empty.
+     *
+     * @since 1.3.2
+     */
+    @Parameter(property = "htmlTargetDir")
+    private String htmlTargetDir;
+
+    /**
+     * JavaScript output file name.
+     */
+    @Parameter(property = "htmlFinalFile", defaultValue = "script.html")
+    private String htmlFinalFile;
+
+    /* ****************** */
+    /* JavaScript Options */
+    /* ****************** */
+
+    /**
+     * JavaScript source directory.
+     */
     @Parameter(property = "jsSourceDir", defaultValue = "js")
     private String jsSourceDir;
 
@@ -312,7 +358,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 1.7.2
      */
-    @Parameter(property = "closureLanguageIn", defaultValue = "ECMASCRIPT6")
+    @Parameter(property = "closureLanguageIn", defaultValue = "ECMASCRIPT_2021")
     private LanguageMode closureLanguageIn;
 
     /**
@@ -321,7 +367,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 1.7.5
      */
-    @Parameter(property = "closureLanguageOut", defaultValue = "ECMASCRIPT5")
+    @Parameter(property = "closureLanguageOut", defaultValue = "ECMASCRIPT_2018")
     private LanguageMode closureLanguageOut;
 
     /**
@@ -478,6 +524,9 @@ public class MinifyMojo extends AbstractMojo {
         if (Strings.isNullOrEmpty(jsTargetDir)) {
             jsTargetDir = jsSourceDir;
         }
+        if (Strings.isNullOrEmpty(htmlTargetDir)) {
+          htmlTargetDir = htmlSourceDir;
+      }
         if (Strings.isNullOrEmpty(charset)) {
             charset = Charset.defaultCharset().name();
         }
@@ -488,8 +537,12 @@ public class MinifyMojo extends AbstractMojo {
     }
 
     private ClosureConfig fillClosureConfig() throws MojoFailureException {
-        DependencyOptions dependencyOptions = new DependencyOptions();
-        dependencyOptions.setDependencySorting(closureSortDependencies);
+      DependencyOptions dependencyOptions;
+      if (closureSortDependencies) {
+        dependencyOptions = DependencyOptions.sortOnly();
+      } else {
+      dependencyOptions = DependencyOptions.none();
+      }
 
         List<SourceFile> externs = new ArrayList<>();
         for (String extern : closureExterns) {
@@ -545,6 +598,8 @@ public class MinifyMojo extends AbstractMojo {
                     cssFinalFile));
             tasks.add(createJSTask(yuiConfig, closureConfig, jsSourceFiles, jsSourceIncludes, jsSourceExcludes,
                     jsFinalFile));
+            tasks.add(createHTMLTask(yuiConfig, closureConfig, htmlSourceFiles, htmlSourceIncludes, htmlSourceExcludes,
+                htmlFinalFile));
         }
 
         return tasks;
@@ -564,5 +619,13 @@ public class MinifyMojo extends AbstractMojo {
         return new ProcessJSFilesTask(getLog(), verbose, bufferSize, Charset.forName(charset), suffix, nosuffix,
                 skipMerge, skipMinify, webappSourceDir, webappTargetDir, jsSourceDir, jsSourceFiles, jsSourceIncludes,
                 jsSourceExcludes, jsTargetDir, jsFinalFile, jsEngine, yuiConfig, closureConfig);
+    }
+    
+    private ProcessFilesTask createHTMLTask(YuiConfig yuiConfig, ClosureConfig closureConfig,
+        List<String> htmlSourceFiles, List<String> htmlSourceIncludes, List<String> htmlSourceExcludes,
+        String htmlFinalFile) throws FileNotFoundException {
+      return new ProcessHTMLFilesTask(getLog(), verbose, bufferSize, Charset.forName(charset), suffix, nosuffix,
+          skipMerge, skipMinify, webappSourceDir, webappTargetDir, htmlSourceDir, htmlSourceFiles,
+          htmlSourceIncludes, htmlSourceExcludes, htmlTargetDir, htmlFinalFile, cssEngine, yuiConfig);
     }
 }

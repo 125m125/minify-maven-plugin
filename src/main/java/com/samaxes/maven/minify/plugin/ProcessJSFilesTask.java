@@ -21,6 +21,7 @@ package com.samaxes.maven.minify.plugin;
 import com.google.common.collect.Lists;
 import com.google.javascript.jscomp.*;
 import com.google.javascript.jscomp.Compiler;
+import com.google.javascript.jscomp.jarjar.com.google.common.collect.ImmutableList;
 import com.samaxes.maven.minify.common.ClosureConfig;
 import com.samaxes.maven.minify.common.JavaScriptErrorReporter;
 import com.samaxes.maven.minify.common.YuiConfig;
@@ -128,7 +129,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
                         }
                     }
 
-                    SourceFile input = SourceFile.fromInputStream(mergedFile.getName(), in, charset);
+                    SourceFile input = SourceFile.fromFile(mergedFile.getAbsolutePath(), charset);
                     List<SourceFile> externs = new ArrayList<>();
                     externs.addAll(CommandLineRunner.getBuiltinExterns(closureConfig.getEnvironment()));
                     externs.addAll(closureConfig.getExterns());
@@ -137,13 +138,14 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
                     compiler.compile(externs, Lists.newArrayList(input), options);
 
                     // Check for errors.
-                    JSError[] errors = compiler.getErrors();
-                    if (errors.length > 0) {
+                    ImmutableList<JSError> errors = compiler.getErrors();
+                    if (errors.size() > 0) {
                         StringBuilder msg = new StringBuilder("JSCompiler errors\n");
                         MessageFormatter formatter = new LightweightMessageFormatter(compiler);
                         for (JSError e : errors) {
                             msg.append(formatter.formatError(e));
                         }
+                        System.out.println(closureConfig.getLanguageOut());
                         throw new RuntimeException(msg.toString());
                     }
 
