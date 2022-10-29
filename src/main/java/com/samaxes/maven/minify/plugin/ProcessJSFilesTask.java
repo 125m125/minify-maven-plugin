@@ -65,17 +65,18 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
      * @param engine          minify processor engine selected
      * @param yuiConfig       YUI Compressor configuration
      * @param closureConfig   Google Closure Compiler configuration
+     * @param newnames 
      * @throws FileNotFoundException when the given source file does not exist
      */
     public ProcessJSFilesTask(Log log, boolean verbose, Integer bufferSize, Charset charset, String suffix,
                               boolean nosuffix, boolean skipMerge, boolean skipMinify, String webappSourceDir,
                               String webappTargetDir, String inputDir, List<String> sourceFiles,
                               List<String> sourceIncludes, List<String> sourceExcludes, String outputDir,
-                              String outputFilename, Engine engine, YuiConfig yuiConfig, ClosureConfig closureConfig)
+                              String outputFilename, Engine engine, YuiConfig yuiConfig, ClosureConfig closureConfig, Map<String, String> newnames)
             throws FileNotFoundException {
         super(log, verbose, bufferSize, charset, suffix, nosuffix, skipMerge, skipMinify, webappSourceDir,
                 webappTargetDir, inputDir, sourceFiles, sourceIncludes, sourceExcludes, outputDir, outputFilename,
-                engine, yuiConfig);
+                engine, yuiConfig, newnames);
 
         this.closureConfig = closureConfig;
     }
@@ -145,7 +146,6 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
                         for (JSError e : errors) {
                             msg.append(formatter.formatError(e));
                         }
-                        System.out.println(closureConfig.getLanguageOut());
                         throw new RuntimeException(msg.toString());
                     }
 

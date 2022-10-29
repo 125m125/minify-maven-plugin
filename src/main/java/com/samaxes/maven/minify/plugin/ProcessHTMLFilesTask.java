@@ -22,11 +22,15 @@ import com.googlecode.htmlcompressor.compressor.HtmlCompressor;
 import com.samaxes.maven.minify.common.YuiConfig;
 import com.samaxes.maven.minify.plugin.MinifyMojo.Engine;
 import com.yahoo.platform.yui.compressor.CssCompressor;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.maven.plugin.logging.Log;
 import org.codehaus.plexus.util.IOUtil;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Task for merging and compressing CSS files.
@@ -57,16 +61,17 @@ public class ProcessHTMLFilesTask extends ProcessFilesTask {
      * @param outputFilename  the output file name
      * @param engine          minify processor engine selected
      * @param yuiConfig       YUI Compressor configuration
+     * @param newNames 
      * @throws FileNotFoundException when the given source file does not exist
      */
     public ProcessHTMLFilesTask(Log log, boolean verbose, Integer bufferSize, Charset charset, String suffix,
                                boolean nosuffix, boolean skipMerge, boolean skipMinify, String webappSourceDir,
                                String webappTargetDir, String inputDir, List<String> sourceFiles,
                                List<String> sourceIncludes, List<String> sourceExcludes, String outputDir,
-                               String outputFilename, Engine engine, YuiConfig yuiConfig) throws FileNotFoundException {
-        super(log, verbose, bufferSize, charset, suffix, nosuffix, skipMerge, skipMinify, webappSourceDir,
+                               String outputFilename, Engine engine, YuiConfig yuiConfig, Map<String, String> newNames) throws FileNotFoundException {
+        super(log, verbose, bufferSize, charset, suffix, true, true, skipMinify, webappSourceDir,
                 webappTargetDir, inputDir, sourceFiles, sourceIncludes, sourceExcludes, outputDir, outputFilename,
-                engine, yuiConfig);
+                engine, yuiConfig, newNames);
     }
 
     /**
@@ -87,16 +92,9 @@ public class ProcessHTMLFilesTask extends ProcessFilesTask {
             log.info("Creating the minified file [" + (verbose ? minifiedFile.getPath() : minifiedFile.getName())
                     + "].");
 
-            switch (engine) {
-                case YUI:
-                    log.debug("Using HtmlCompressor.");
-                    String result = htmlCompressor.compress(IOUtil.toString(in));
-                    IOUtil.copy(result, out);
-                    break;
-                default:
-                    log.warn("HTML engine not supported.");
-                    break;
-            }
+            log.debug("Using HtmlCompressor.");
+            String result = htmlCompressor.compress(IOUtil.toString(in, charset.name()));
+            IOUtil.copy(result.getBytes(charset), out);
         } catch (IOException e) {
             log.error("Failed to compress the HTML file [" + (verbose ? mergedFile.getPath() : mergedFile.getName())
                     + "].", e);

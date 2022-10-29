@@ -18,6 +18,8 @@
  */
 package com.samaxes.maven.minify.plugin;
 
+import com.google.common.hash.Hashing;
+import com.google.common.io.Files;
 import com.samaxes.maven.minify.common.SourceFilesEnumeration;
 import com.samaxes.maven.minify.common.YuiConfig;
 import com.samaxes.maven.minify.plugin.MinifyMojo.Engine;
@@ -32,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.zip.GZIPOutputStream;
 
@@ -62,9 +65,9 @@ public abstract class ProcessFilesTask implements Callable<Object> {
 
     protected final YuiConfig yuiConfig;
 
-    private final File sourceDir;
+    protected final File sourceDir;
 
-    private final File targetDir;
+    protected final File targetDir;
 
     private final String mergedFilename;
 
@@ -73,6 +76,12 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     private final boolean sourceFilesEmpty;
 
     private final boolean sourceIncludesEmpty;
+
+    private Map<String, String> newNames;
+
+    private String webappTargetDir;
+
+    private String webappSourceDir;
 
     /**
      * Task constructor.
@@ -102,7 +111,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
                             boolean nosuffix, boolean skipMerge, boolean skipMinify, String webappSourceDir,
                             String webappTargetDir, String inputDir, List<String> sourceFiles,
                             List<String> sourceIncludes, List<String> sourceExcludes, String outputDir,
-                            String outputFilename, Engine engine, YuiConfig yuiConfig) throws FileNotFoundException {
+                            String outputFilename, Engine engine, YuiConfig yuiConfig, Map<String, String> newNames) throws FileNotFoundException {
         this.log = log;
         this.verbose = verbose;
         this.bufferSize = bufferSize;
@@ -111,8 +120,11 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         this.nosuffix = nosuffix;
         this.skipMerge = skipMerge;
         this.skipMinify = skipMinify;
+        this.webappSourceDir = webappSourceDir;
+        this.webappTargetDir = webappTargetDir;
         this.engine = engine;
         this.yuiConfig = yuiConfig;
+        this.newNames = newNames;
 
         this.sourceDir = new File(webappSourceDir + File.separator + inputDir);
         this.targetDir = new File(webappTargetDir + File.separator + outputDir);
@@ -158,10 +170,15 @@ public abstract class ProcessFilesTask implements Callable<Object> {
                         if (!targetPath.exists() && !targetPath.mkdirs()) {
                             throw new RuntimeException("Unable to create target directory for: " + targetPath);
                         }
+                        if ("serviceworker.js".equalsIgnoreCase(mergedFile.getName())) {
+                          newNames.put(mergedFile.getAbsolutePath().substring(webappSourceDir.length()),mergedFile.getName());
+                          continue;
+                        }
 
                         File minifiedFile = new File(targetPath, (nosuffix) ? mergedFile.getName()
-                                : FileUtils.removeExtension(mergedFile.getName()) + suffix + "." + FileUtils.extension(mergedFile.getName()));
+                                : FileUtils.removeExtension(mergedFile.getName()) + createSuffix(suffix, mergedFile) + "." + FileUtils.extension(mergedFile.getName()));
                         minify(mergedFile, minifiedFile);
+                        newNames.put(mergedFile.getAbsolutePath().substring(webappSourceDir.length()), minifiedFile.getName());
                     }
                 } else if (skipMinify) {
                     File mergedFile = new File(targetDir, mergedFilename);
@@ -187,6 +204,17 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         }
 
         return null;
+    }
+
+    private String createSuffix(String suffix, File mergedFile) {
+      if (suffix.contains("[hash]")) {
+        try {
+          return suffix.replace("[hash]", Files.asByteSource(mergedFile).hash(Hashing.md5()).toString());
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+      return suffix;
     }
 
     /**
