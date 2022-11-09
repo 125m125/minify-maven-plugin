@@ -1,3 +1,65 @@
+This fork minifies html and replaces references to the original files with references to the minified files. I only tested it with my specific configuration and it will probably not work with others (at least combining files has to be disabled etc.)
+
+To use the fork, clone it locally, `mvn clean install` it locally and use
+
+```xml
+<groupId>com.samaxes.maven</groupId>
+<artifactId>minify-maven-plugin</artifactId>
+<version>2.0.0-SNAPSHOT-125m125</version>
+```
+
+HTML files have the same options as javascript etc (`htmlSourceDir`, `htmlSourceIncludes`, ...).
+
+HTML files won't get a suffix. `[hash]` in the `<suffix>` will be replaced with the md5 hash of the source file for cache busting.
+
+New features were only quickly added in without worrying about maintainability or performance and mostly to simply get it to work with my project. I would not recommend using it for actual production or larger projects.
+
+The following configuration works for me with html, css and js all placed directly inside `src/main/resources/web` and some subfolders. Your mileage may vary:
+
+```xml
+<plugin>
+	<groupId>com.samaxes.maven</groupId>
+	<artifactId>minify-maven-plugin</artifactId>
+	<version>2.0.0-SNAPSHOT-125m125</version>
+	<executions>
+		<execution>
+			<id>default-minify</id>
+			<configuration>
+				<jsEngine>CLOSURE</jsEngine>
+				<skipMerge>true</skipMerge>
+				<suffix>.[hash]</suffix>
+				<charset>${project.build.sourceEncoding}</charset>
+				<webappSourceDir>${project.basedir}/src/main/resources/web</webappSourceDir>
+            	<webappTargetDir>${project.build.outputDirectory}/web</webappTargetDir>
+				<cssSourceDir>./</cssSourceDir>
+				<jsSourceDir>./</jsSourceDir>
+				<htmlSourceDir>./</htmlSourceDir>
+				<cssSourceIncludes>
+					<cssSourceInclude>**/*.css</cssSourceInclude>
+				</cssSourceIncludes>
+				<cssSourceExcludes>
+					<cssSourceExclude>**/*.min.css</cssSourceExclude>
+				</cssSourceExcludes>
+				<jsSourceIncludes>
+					<jsSourceInclude>**/*.js</jsSourceInclude>
+				</jsSourceIncludes>
+				<jsSourceExcludes>
+					<jsSourceExclude>**/*.min.js</jsSourceExclude>
+				</jsSourceExcludes>
+				<htmlSourceIncludes>
+					<htmlSourceInclude>**/*.html</htmlSourceInclude>
+				</htmlSourceIncludes>
+			</configuration>
+			<goals>
+				<goal>minify</goal>
+			</goals>
+		</execution>
+	</executions>
+</plugin>
+```
+
+
+
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.samaxes.maven/minify-maven-plugin/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.samaxes.maven/minify-maven-plugin)
 [![Build Status](https://travis-ci.org/samaxes/minify-maven-plugin.png)](https://travis-ci.org/samaxes/minify-maven-plugin)
 
